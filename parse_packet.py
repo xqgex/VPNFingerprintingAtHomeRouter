@@ -77,37 +77,37 @@ class _EtherType(Enum):
             return None
 
 
-class _IPv4(int):
+class IPv4(int):
 
     def is_private(self) -> bool:
         """
-        >>> _IPv4.from_string('8.8.8.8').is_private()
+        >>> IPv4.from_string('8.8.8.8').is_private()
         False
-        >>> _IPv4.from_string('10.0.0.0').is_private()
+        >>> IPv4.from_string('10.0.0.0').is_private()
         True
         """
-        for range_start, range_end in _IPv4_PRIVATE_RANGES:
+        for range_start, range_end in IPv4_PRIVATE_RANGES:
             if range_start <= self <= range_end:
                 return True
         return False
 
     @classmethod
-    def from_bytes(cls, raw: bytes, field: _PacketField) -> '_IPv4':
+    def from_bytes(cls, raw: bytes, field: _PacketField) -> 'IPv4':
         """
         >>> mock_field = _PacketField(start_index=1, length=2)
-        >>> hex(_IPv4.from_bytes(b'\\x01\\x23\\x45\\x67\\x89', mock_field))
+        >>> hex(IPv4.from_bytes(b'\\x01\\x23\\x45\\x67\\x89', mock_field))
         '0x2345'
         """
         return cls(int.from_bytes(field.parse_raw(raw), byteorder=_ENDIANNESS))
 
     @classmethod
-    def from_string(cls, string: str) -> '_IPv4':
+    def from_string(cls, string: str) -> 'IPv4':
         """
-        >>> _IPv4.from_string('0.0.0.1')
+        >>> IPv4.from_string('0.0.0.1')
         1
-        >>> _IPv4.from_string('10.0.0.1')
+        >>> IPv4.from_string('10.0.0.1')
         167772161
-        >>> _IPv4.from_string('255.255.255.255')
+        >>> IPv4.from_string('255.255.255.255')
         4294967295
         """
         octets = string.split('.', 4)
@@ -139,12 +139,12 @@ def parse(
             l3_payload_start = ethertype_option.start_index + ethertype_option.length
             break
     if ethertype == _EtherType.IPV4:
-        ip_source = _IPv4.from_bytes(raw[l3_payload_start:], _IP_SOURCE)
-        ip_destination = _IPv4.from_bytes(raw[l3_payload_start:], _IP_DESTINATION)
+        ip_source = IPv4.from_bytes(raw[l3_payload_start:], _IP_SOURCE)
+        ip_destination = IPv4.from_bytes(raw[l3_payload_start:], _IP_DESTINATION)
         if internal_as_source and not ip_source.is_private():  # At least one should be private
             ip_source, ip_destination = ip_destination, ip_source  # Flip
         if not filter_internal_communication or not ip_source.is_private() or not ip_destination.is_private():
-            return hex(ip_source), hex(ip_destination)
+            return ip_source, ip_destination
     return None, None
 
 
@@ -156,8 +156,8 @@ _ETHERTYPE_OPTIONS = (
     )
 _IP_DESTINATION = _PacketField(start_index=16, length=4)
 _IP_SOURCE = _PacketField(start_index=12, length=4)
-_IPv4_PRIVATE_RANGES = (
-    (_IPv4.from_string('10.0.0.0'), _IPv4.from_string('10.255.255.255')),
-    (_IPv4.from_string('172.16.0.0'), _IPv4.from_string('172.31.255.255')),
-    (_IPv4.from_string('192.168.0.0'), _IPv4.from_string('192.168.255.255')),
+IPv4_PRIVATE_RANGES = (
+    (IPv4.from_string('10.0.0.0'), IPv4.from_string('10.255.255.255')),
+    (IPv4.from_string('172.16.0.0'), IPv4.from_string('172.31.255.255')),
+    (IPv4.from_string('192.168.0.0'), IPv4.from_string('192.168.255.255')),
     )
