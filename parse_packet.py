@@ -121,8 +121,8 @@ def parse(
         raw: bytes,
         filter_internal_communication: bool=True,
         internal_as_source: bool=True,
-        ) -> Union[Tuple[int, int], Tuple[None, None]]:
-    """ A Python function that receive a raw packet and returns two integers (src ip, dst ip).
+        ) -> Union[Tuple[IPv4, IPv4], Tuple[None, None]]:
+    """ A Python function that receive a raw packet and returns the packet source IP and destination IP.
 
     :param bytes raw: A raw packet.
     :param bool filter_internal_communication: When the field is `True`, the function will return `None` if both source
@@ -130,7 +130,7 @@ def parse(
     :param bool internal_as_source: When the field is `True`, the returned tuple will always have the internal IP
                                     address as the source (flip the values for incoming packets).
     :return: The extracted source and destination IPv4 addresses.
-    :rtype: Union[Tuple[int, int], Tuple[None, None]]
+    :rtype: Union[Tuple[IPv4, IPv4], Tuple[None, None]]
     """
     l3_payload_start = -1
     for ethertype_option in _ETHERTYPE_OPTIONS:
