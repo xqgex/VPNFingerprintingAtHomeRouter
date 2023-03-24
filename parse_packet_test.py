@@ -6,7 +6,7 @@ from typing import NamedTuple, Optional
 from hamcrest import assert_that, calling, equal_to, is_, not_, raises
 import pytest
 
-from parse_packet import IPv4, parse
+from parse_packet import IPv4, parse_from_l2
 
 
 class _Direction(Enum):
@@ -95,6 +95,16 @@ _TEST_IPV4_PACKETS = (
                 ip_source=IPv4.from_string('192.85.1.22'),  # 'c0 55 01 16'
                 ip_destination=IPv4.from_string('10.124.200.3'),  # '0a 7c c8 03'
                 communication_direction=_Direction.INCOMING),
+    _TestPacket(raw=bytes.fromhex(
+                    'ff ff ff ff ff ff aa bb cc dd ee ff 08 00 45 00'
+                    '00 3c cd 48 40 00 40 06 7b 55 c0 a8 38 67 ff ff'
+                    'ff ff c7 91 04 aa 8e 58 cc bf 00 00 00 00 a0 02'
+                    '39 08 f3 91 00 00 02 04 05 b4 04 02 08 0a 00 03'
+                    '01 f7 00 00 00 00 01 03 03 01'
+                    ),
+                ip_source=IPv4.from_string('192.168.56.103'),  # 'c0 a8 38 67'
+                ip_destination=IPv4.from_string('255.255.255.255'),  # 'ff ff ff ff'
+                communication_direction=_Direction.INTERNAL),
     )
 _TEST_NON_IPV4_PACKETS = (
     _TestPacket(raw=bytes.fromhex(
@@ -131,7 +141,7 @@ class TestPacketParsing:
             _2: Optional[IPv4],
             _3: Optional[_Direction],
             ) -> None:
-        assert_that(calling(parse).with_args(packet), not_(raises(Exception)))
+        assert_that(calling(parse_from_l2).with_args(packet), not_(raises(Exception)))
 
     @pytest.mark.parametrize('packet,_1,_2,_3', [
         *_TEST_NON_IPV4_PACKETS
@@ -143,7 +153,7 @@ class TestPacketParsing:
             _2: Optional[IPv4],
             _3: Optional[_Direction],
             ) -> None:
-        assert_that(calling(parse).with_args(packet), not_(raises(Exception)))
+        assert_that(calling(parse_from_l2).with_args(packet), not_(raises(Exception)))
 
     @pytest.mark.parametrize('packet,ip_source,ip_destination,_', [
         *_TEST_IPV4_PACKETS
@@ -155,7 +165,7 @@ class TestPacketParsing:
             ip_destination: Optional[IPv4],
             _: Optional[_Direction],
             ) -> None:
-        assert_that(parse(packet, filter_internal_communication=False, internal_as_source=False),
+        assert_that(parse_from_l2(packet, filter_internal_communication=False, internal_as_source=False),
                     is_(equal_to((ip_source, ip_destination))))
 
     @pytest.mark.parametrize('packet,ip_source,ip_destination,_', [
@@ -168,7 +178,7 @@ class TestPacketParsing:
             ip_destination: Optional[IPv4],
             _: Optional[_Direction],
             ) -> None:
-        assert_that(parse(packet, filter_internal_communication=False, internal_as_source=False),
+        assert_that(parse_from_l2(packet, filter_internal_communication=False, internal_as_source=False),
                     is_(equal_to((ip_source, ip_destination))))
 
     @pytest.mark.parametrize('packet,ip_source,ip_destination,communication_direction', [
@@ -182,7 +192,7 @@ class TestPacketParsing:
             communication_direction: Optional[_Direction],
             ) -> None:
         expected = (None, None) if communication_direction == _Direction.INTERNAL else (ip_source, ip_destination)
-        assert_that(parse(packet, filter_internal_communication=True, internal_as_source=False),
+        assert_that(parse_from_l2(packet, filter_internal_communication=True, internal_as_source=False),
                     is_(equal_to(expected)))
 
     @pytest.mark.parametrize('packet,ip_source,ip_destination,communication_direction', [
@@ -197,5 +207,5 @@ class TestPacketParsing:
             ) -> None:
         if communication_direction == _Direction.INCOMING:
             ip_source, ip_destination = ip_destination, ip_source  # Flip
-        assert_that(parse(packet, filter_internal_communication=False, internal_as_source=True),
+        assert_that(parse_from_l2(packet, filter_internal_communication=False, internal_as_source=True),
                     is_(equal_to((ip_source, ip_destination))))

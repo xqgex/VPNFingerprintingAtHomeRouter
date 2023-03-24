@@ -79,10 +79,21 @@ class _EtherType(Enum):
 
 class IPv4(int):
 
+    def __str__(self) -> str:
+        """
+        >>> str(IPv4(134744072))
+        '8.8.8.8'
+        >>> str(IPv4(167772160))
+        '10.0.0.0'
+        """
+        return '.'.join([str((self >> (i << 3)) & 0xff) for i in range(4)][::-1])
+
     def is_private(self) -> bool:
         """
         >>> IPv4.from_string('8.8.8.8').is_private()
         False
+        >>> IPv4.from_string('127.222.222.222').is_private()
+        True
         >>> IPv4.from_string('10.0.0.0').is_private()
         True
         """
@@ -117,12 +128,12 @@ class IPv4(int):
                    + int(octets[3]))
 
 
-def parse(
+def parse_from_l2(
         raw: bytes,
         filter_internal_communication: bool=True,
         internal_as_source: bool=True,
         ) -> Union[Tuple[IPv4, IPv4], Tuple[None, None]]:
-    """ A Python function that receive a raw packet and returns the packet source IP and destination IP.
+    """ A Python function that receive a raw L2 packet and returns the packet source IP and destination IP.
 
     :param bytes raw: A raw packet.
     :param bool filter_internal_communication: When the field is `True`, the function will return `None` if both source
@@ -139,12 +150,31 @@ def parse(
             l3_payload_start = ethertype_option.start_index + ethertype_option.length
             break
     if ethertype == _EtherType.IPV4:
-        ip_source = IPv4.from_bytes(raw[l3_payload_start:], _IP_SOURCE)
-        ip_destination = IPv4.from_bytes(raw[l3_payload_start:], _IP_DESTINATION)
-        if internal_as_source and not ip_source.is_private():  # At least one should be private
-            ip_source, ip_destination = ip_destination, ip_source  # Flip
-        if not filter_internal_communication or not ip_source.is_private() or not ip_destination.is_private():
-            return ip_source, ip_destination
+        return parse_from_l3(raw[l3_payload_start:], filter_internal_communication, internal_as_source)
+    return None, None
+
+
+def parse_from_l3(
+        raw: bytes,
+        filter_internal_communication: bool=True,
+        internal_as_source: bool=True,
+        ) -> Union[Tuple[IPv4, IPv4], Tuple[None, None]]:
+    """ A Python function that receive a raw L3 packet and returns the packet source IP and destination IP.
+
+    :param bytes raw: A raw packet.
+    :param bool filter_internal_communication: When the field is `True`, the function will return `None` if both source
+                                               IP and the destination IP are private.
+    :param bool internal_as_source: When the field is `True`, the returned tuple will always have the internal IP
+                                    address as the source (flip the values for incoming packets).
+    :return: The extracted source and destination IPv4 addresses.
+    :rtype: Union[Tuple[IPv4, IPv4], Tuple[None, None]]
+    """
+    ip_source = IPv4.from_bytes(raw, _IP_SOURCE)
+    ip_destination = IPv4.from_bytes(raw, _IP_DESTINATION)
+    if internal_as_source and not ip_source.is_private():  # At least one should be private
+        ip_source, ip_destination = ip_destination, ip_source  # Flip
+    if not filter_internal_communication or not ip_source.is_private() or not ip_destination.is_private():
+        return ip_source, ip_destination
     return None, None
 
 
@@ -158,6 +188,9 @@ _IP_DESTINATION = _PacketField(start_index=16, length=4)
 _IP_SOURCE = _PacketField(start_index=12, length=4)
 IPv4_PRIVATE_RANGES = (
     (IPv4.from_string('10.0.0.0'), IPv4.from_string('10.255.255.255')),
+    (IPv4.from_string('127.0.0.0'), IPv4.from_string('127.255.255.255')),
     (IPv4.from_string('172.16.0.0'), IPv4.from_string('172.31.255.255')),
     (IPv4.from_string('192.168.0.0'), IPv4.from_string('192.168.255.255')),
+    (IPv4.from_string('224.0.0.0'), IPv4.from_string('239.255.255.255')),
+    (IPv4.from_string('255.255.255.255'), IPv4.from_string('255.255.255.255')),
     )
