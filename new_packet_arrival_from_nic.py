@@ -15,7 +15,7 @@ def _packet_arrival_callback(packet: Packet) -> None:
                                                   filter_internal_communication=True,
                                                   internal_as_source=True)
         if ip_source is not None and ip_destination is not None:
-            analyze(ip_source, ip_destination, packet.get_timestamp())  # XXX
+            analyze(ip_source, ip_destination, packet.get_timestamp())
     packet.accept()
 
 

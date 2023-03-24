@@ -12,6 +12,5 @@ if __name__ == '__main__':
         ip_source, ip_destination = parse_from_l2(bytes(packet),
                                                   filter_internal_communication=True,
                                                   internal_as_source=True)
-        print(f'{ip_source}->{ip_destination}')  # XXX
         if ip_source is not None and ip_destination is not None:
             analyze(ip_source, ip_destination, packet.time)
