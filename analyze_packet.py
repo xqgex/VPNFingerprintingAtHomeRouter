@@ -1,9 +1,13 @@
 from dataclasses import dataclass
+from logging import INFO, basicConfig, getLogger
 from typing import Dict, Optional, Tuple
 
-_COUNT_PACKETS = 10000
-_TIME_WINDOW_SEC = 20 * 60
-_WINDOWS_OVERLAP_THRESHOLD = 0.75 * _COUNT_PACKETS
+basicConfig(format='[%(asctime)s] %(levelname)s - %(message)s', level=INFO)
+
+_COUNT_PACKETS = 10
+_LOGGER = getLogger()
+_TIME_WINDOW_SEC = 20  # 20 minutes
+_WINDOW_OVERLAP_THRESHOLD = 0.75 * _COUNT_PACKETS
 
 
 @dataclass
@@ -29,6 +33,8 @@ def _report(ip_source: int, ip_destination: int, timestamp: float) -> None:
         timestamp - HOSTS[ip_source].timestamp,
         HOSTS[ip_source].count_this_window,
         )
+    _LOGGER.info(f'Suspected VPN: {ip_source} with {ip_destination}, {HOSTS[ip_source].count_this_window} ' \
+                 f'packets in a {timestamp - HOSTS[ip_source].timestamp} seconds window')
 
 
 def analyze(ip_source: Optional[int], ip_destination: Optional[int], timestamp: float) -> None:
@@ -43,9 +49,9 @@ def analyze(ip_source: Optional[int], ip_destination: Optional[int], timestamp: 
     :rtype: None
     """
     def _is_suspected_vpn() -> bool:
-        if COUNT_PACKETS < HOSTS[ip_source].count_this_window:
+        if _COUNT_PACKETS < HOSTS[ip_source].count_this_window:
             return True
-        if _WINDOWS_OVERLAP_THRESHOLD < HOSTS[ip_source].count_prev_window + HOSTS[ip_source].count_this_window:
+        if _WINDOW_OVERLAP_THRESHOLD < HOSTS[ip_source].count_prev_window + HOSTS[ip_source].count_this_window:
             return True
         return False
     global HOSTS
@@ -58,6 +64,7 @@ def analyze(ip_source: Optional[int], ip_destination: Optional[int], timestamp: 
             HOSTS[ip_source].count_this_window = 0
         HOSTS[ip_source].count_this_window += 1
         if _TIME_WINDOW_SEC < timestamp - HOSTS[ip_source].timestamp:  # Start a new window
+            _LOGGER.info(f'New window for {ip_source} with {ip_destination}')  # XXX XXX XXX
             if _is_suspected_vpn():
                 _report(ip_source, ip_destination, timestamp)
             HOSTS[ip_source].timestamp = timestamp

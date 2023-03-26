@@ -1,1 +1,5 @@
+# Core requirements
 NetfilterQueue==1.1.0
+
+# Offline testing
+scapy
