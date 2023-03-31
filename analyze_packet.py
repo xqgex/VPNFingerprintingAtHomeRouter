@@ -7,7 +7,7 @@ basicConfig(format='[%(asctime)s] %(levelname)s - %(message)s', level=INFO)
 _COUNT_PACKETS = 10000
 _LOGGER = getLogger()
 _TIME_WINDOW_SEC = 20 * 60 # 20 minutes
-_WINDOWS_OVERLAP_THRESHOLD = 0.75 * _COUNT_PACKETS
+_WINDOW_OVERLAP_THRESHOLD = 0.75 * _COUNT_PACKETS
 
 
 @dataclass
