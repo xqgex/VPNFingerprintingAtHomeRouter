@@ -6,7 +6,7 @@ from analyze_packet import analyze
 from parse_packet import parse_from_l2
 
 _PCAP_FILE_EXT = ('.pcap', '.pcapng')
-_PCAPS_FOLDER = Path('/home/xqgex/Downloads/773/Project/PCAPs/VPN-PCAPs-02/').resolve()
+_PCAPS_FOLDER = Path('<add_the_path_here>').resolve()
 
 
 if __name__ == '__main__':
