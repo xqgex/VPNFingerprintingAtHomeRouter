@@ -56,15 +56,15 @@ def analyze(ip_source: Optional[int], ip_destination: Optional[int], timestamp: 
         return False
     global HOSTS
     if ip_source is not None and ip_destination is not None:
-        if ip_source not in HOSTS:
-            HOSTS[ip_source] = TrackedConnection.empty()  # Initial record
+        if ip_source not in HOSTS:  # Initial record
+            HOSTS[ip_source] = TrackedConnection.empty()
         if HOSTS[ip_source].ip_destination != ip_destination:  # New connection
             HOSTS[ip_source].ip_destination = ip_destination
             HOSTS[ip_source].timestamp = timestamp
             HOSTS[ip_source].count_this_window = 0
         HOSTS[ip_source].count_this_window += 1
         if _TIME_WINDOW_SEC < timestamp - HOSTS[ip_source].timestamp:  # Start a new window
-            _LOGGER.info(f'New window for {ip_source} with {ip_destination}')  # XXX XXX XXX
+            _LOGGER.debug(f'New window for {ip_source} with {ip_destination}')
             if _is_suspected_vpn():
                 _report(ip_source, ip_destination, timestamp)
             HOSTS[ip_source].timestamp = timestamp
