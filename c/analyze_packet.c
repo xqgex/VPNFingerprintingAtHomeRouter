@@ -25,8 +25,8 @@ typedef unsigned int function_ret_type;
 typedef struct TrackedConnection {
   ip_type        ip_destination;
   timestamp_type timestamp;
-  unsigned int   count_this;
-  unsigned int   count_prev;
+  unsigned int   count_this; /* Note, Vulnerable for overflow */
+  unsigned int   count_prev; /* Note, Vulnerable for overflow */
 } TrackedConnection_type;
 
 /**
@@ -158,7 +158,8 @@ function_ret_type is_suspected_vpn(ip_type ip_source) {
       ret = RET_SUCCESS;
     }
   } else {
-    printk(KERN_INFO "[Error] Reporter could not find an IP that should exist `%d`\n", ip_source);
+    u32 const printable_ip_source = htonl(ip_source);
+    printk(KERN_INFO "[Error] Reporter failed to find IP `%pI4`\n", &printable_ip_source);
   }
   return ret;
 }
@@ -187,14 +188,16 @@ void remove_node(hosts_node_type *node_to_remove) {
 }
 
 void report(ip_type ip_source, ip_type ip_destination, timestamp_type timestamp) {
+  u32 const printable_ip_source = htonl(ip_source);
+  u32 const printable_ip_destination = htonl(ip_destination);
   (void)ip_source;
   (void)ip_destination;
   (void)timestamp;
   printk
   (
-    KERN_INFO "[Reporter] source `%d` destination `%d` timestamp `%d`\n",
-    ip_source,
-    ip_destination,
+    KERN_INFO "[Reporter] source `%pI4` destination `%pI4` timestamp `%llu`\n",
+    &printable_ip_source,
+    &printable_ip_destination,
     timestamp
   );
 }
@@ -218,11 +221,13 @@ void analyze(ip_type ip_source, ip_type ip_destination, timestamp_type timestamp
   function_ret_type  ret  = RET_SUCCESS;
   hosts_node_type   *node = search_node(ip_source);
   if (node == NULL) { /* Initial record */
+    printk(KERN_INFO "[Debug] analyze() - Initial record\n"); /* XXX */
     node = create_empty_node(ip_source);
     ret = insert_node(node);
   }
   if (RET_SUCCESS == ret) {
     if (ip_destination != node->connection.ip_destination) { /* New connection */
+      printk(KERN_INFO "[Debug] analyze() - New connection\n"); /* XXX */
       node->connection.ip_destination = ip_destination;
       node->connection.timestamp      = timestamp;
       node->connection.count_this     = 1U;
@@ -230,6 +235,7 @@ void analyze(ip_type ip_source, ip_type ip_destination, timestamp_type timestamp
       node->connection.count_this += 1;
     }
     if (time_window_sec < timestamp - node->connection.timestamp) { /* Start a new window */
+      printk(KERN_INFO "[Debug] analyze() - Start a new window\n"); /* XXX */
       if (RET_SUCCESS == is_suspected_vpn(ip_source)) {
         report(ip_source, ip_destination, timestamp);
       }
@@ -238,7 +244,8 @@ void analyze(ip_type ip_source, ip_type ip_destination, timestamp_type timestamp
       node->connection.count_this = 0;
     }
   } else {
-    printk(KERN_INFO "[Error] Failed to insert a new node with IP `%d`\n", ip_source);
+    u32 const printable_ip_source = htonl(ip_source);
+    printk(KERN_INFO "[Error] Failed to insert a new node with IP `%pI4`\n", &printable_ip_source);
   }
 }
 

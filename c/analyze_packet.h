@@ -5,7 +5,7 @@
 /**** Macros                                                                                   ****/
 /**************************************************************************************************/
 
-#define METRIC_COUNT_PACKETS            10000U
+#define METRIC_COUNT_PACKETS            2U /* TODO Restore to 10000U */
 #define METRIC_TIME_WINDOW_SEC          20U * 60U /* 20 minutes */
 #define METRIC_WINDOW_OVERLAP_THRESHOLD (timestamp_type)(0.75f * (METRIC_COUNT_PACKETS))
 
@@ -13,8 +13,8 @@
 /**** Typedefs                                                                                 ****/
 /**************************************************************************************************/
 
-typedef unsigned int ip_type;
-typedef unsigned int timestamp_type;
+typedef u32      ip_type;
+typedef time64_t timestamp_type;
 
 /**************************************************************************************************/
 /**** Functions prototype                                                                      ****/

@@ -13,9 +13,10 @@
 include $(TOPDIR)/rules.mk
 
 # Name and release number of this package
-PKG_NAME:=vpn_fingerprinting
-PKG_VERSION:=1.03
+PKG_NAME:=vpn-fingerprinting
+PKG_VERSION:=1.04
 PKG_RELEASE:=1
+PKG_LICENSE:=GPL
 
 # This specifies the directory where we're going to build the program.
 # The root build directory, $(BUILD_DIR), is by default the build_mipsel
