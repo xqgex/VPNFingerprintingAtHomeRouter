@@ -1,9 +1,13 @@
 from dataclasses import dataclass
+from logging import INFO, basicConfig, getLogger
 from typing import Dict, Optional, Tuple
 
+basicConfig(format='[%(asctime)s] %(levelname)s - %(message)s', level=INFO)
+
 _COUNT_PACKETS = 10000
-_TIME_WINDOW_SEC = 20 * 60
-_WINDOWS_OVERLAP_THRESHOLD = 0.75 * _COUNT_PACKETS
+_LOGGER = getLogger()
+_TIME_WINDOW_SEC = 20 * 60 # 20 minutes
+_WINDOW_OVERLAP_THRESHOLD = 0.75 * _COUNT_PACKETS
 
 
 @dataclass
@@ -29,6 +33,8 @@ def _report(ip_source: int, ip_destination: int, timestamp: float) -> None:
         timestamp - HOSTS[ip_source].timestamp,
         HOSTS[ip_source].count_this_window,
         )
+    _LOGGER.info(f'Suspected VPN: {ip_source} with {ip_destination}, {HOSTS[ip_source].count_this_window} ' \
+                 f'packets in a {timestamp - HOSTS[ip_source].timestamp} seconds window')
 
 
 def analyze(ip_source: Optional[int], ip_destination: Optional[int], timestamp: float) -> None:
@@ -43,21 +49,22 @@ def analyze(ip_source: Optional[int], ip_destination: Optional[int], timestamp: 
     :rtype: None
     """
     def _is_suspected_vpn() -> bool:
-        if COUNT_PACKETS < HOSTS[ip_source].count_this_window:
+        if _COUNT_PACKETS < HOSTS[ip_source].count_this_window:
             return True
-        if _WINDOWS_OVERLAP_THRESHOLD < HOSTS[ip_source].count_prev_window + HOSTS[ip_source].count_this_window:
+        if _WINDOW_OVERLAP_THRESHOLD < HOSTS[ip_source].count_prev_window + HOSTS[ip_source].count_this_window:
             return True
         return False
     global HOSTS
     if ip_source is not None and ip_destination is not None:
-        if ip_source not in HOSTS:
-            HOSTS[ip_source] = TrackedConnection.empty()  # Initial record
+        if ip_source not in HOSTS:  # Initial record
+            HOSTS[ip_source] = TrackedConnection.empty()
         if HOSTS[ip_source].ip_destination != ip_destination:  # New connection
             HOSTS[ip_source].ip_destination = ip_destination
             HOSTS[ip_source].timestamp = timestamp
             HOSTS[ip_source].count_this_window = 0
         HOSTS[ip_source].count_this_window += 1
         if _TIME_WINDOW_SEC < timestamp - HOSTS[ip_source].timestamp:  # Start a new window
+            _LOGGER.debug(f'New window for {ip_source} with {ip_destination}')
             if _is_suspected_vpn():
                 _report(ip_source, ip_destination, timestamp)
             HOSTS[ip_source].timestamp = timestamp

@@ -187,6 +187,7 @@ _ETHERTYPE_OPTIONS = (
 _IP_DESTINATION = _PacketField(start_index=16, length=4)
 _IP_SOURCE = _PacketField(start_index=12, length=4)
 IPv4_PRIVATE_RANGES = (
+    (IPv4.from_string('0.0.0.0'), IPv4.from_string('0.0.0.0')),
     (IPv4.from_string('10.0.0.0'), IPv4.from_string('10.255.255.255')),
     (IPv4.from_string('127.0.0.0'), IPv4.from_string('127.255.255.255')),
     (IPv4.from_string('172.16.0.0'), IPv4.from_string('172.31.255.255')),
