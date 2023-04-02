@@ -1,27 +1,29 @@
-#ifndef ANALYZE_PACKET_H
-#define ANALYZE_PACKET_H
-
-#include "parse_packet.h"
+#ifndef PARSE_PACKET_H
+#define PARSE_PACKET_H
 
 /**************************************************************************************************/
 /**** Macros                                                                                   ****/
 /**************************************************************************************************/
 
-#define METRIC_COUNT_PACKETS            10000U
-#define METRIC_TIME_WINDOW_SEC          20U * 60U /* 20 minutes */
-#define METRIC_WINDOW_OVERLAP_THRESHOLD (timestamp_type)(0.75f * (METRIC_COUNT_PACKETS))
+#define PARSE_FALSE 0U
+#define PARSE_TRUE  1U
+
+#define RET_ANALYZE PARSE_TRUE
+#define RET_SKIP    PARSE_FALSE
+
+#define FILTER_INTERNAL_COMMUNICATION PARSE_TRUE
+#define INTERNAL_AS_SOURCE            PARSE_TRUE
 
 /**************************************************************************************************/
 /**** Typedefs                                                                                 ****/
 /**************************************************************************************************/
 
-typedef time64_t timestamp_type;
+typedef u32 ip_type;
 
 /**************************************************************************************************/
 /**** Functions prototype                                                                      ****/
 /**************************************************************************************************/
 
-void analyze(ip_type ip_source, ip_type ip_destination, timestamp_type timestamp);
-void debug_print_all_hosts(void);
+u16 check_connection(ip_type *const ip_source, ip_type *const ip_destination);
 
-#endif /* ANALYZE_PACKET_H */
+#endif /* PARSE_PACKET_H */

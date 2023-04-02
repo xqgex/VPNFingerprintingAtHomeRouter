@@ -10,6 +10,7 @@
 #include <linux/netfilter_ipv4.h> /* NF_IP_PRI_LAST */
 
 #include "analyze_packet.h"
+#include "parse_packet.h"
 
 static const unsigned short protocol_ip = htons(ETH_P_IP);
 
@@ -18,6 +19,8 @@ static struct nf_hook_ops nfho;
 unsigned int hook_funcion(void *priv, struct sk_buff *skb, const struct nf_hook_state *state) {
   if (protocol_ip == skb->protocol) {
     struct iphdr const *const ip_header = ip_hdr(skb);
+    ip_type source_ip = ntohl(ip_header->saddr);
+    ip_type destination_ip = ntohl(ip_header->daddr);
     time64_t timestamp = ktime_get_boottime_seconds();
     printk
     (
@@ -26,7 +29,9 @@ unsigned int hook_funcion(void *priv, struct sk_buff *skb, const struct nf_hook_
       &ip_header->daddr,
       timestamp
     ); /* XXX */
-    analyze(ntohl(ip_header->saddr), ntohl(ip_header->daddr), timestamp);
+    if (RET_ANALYZE == check_connection(&source_ip, &destination_ip)) {
+      analyze(source_ip, destination_ip, timestamp);
+    }
   }
   return NF_ACCEPT;
 }
