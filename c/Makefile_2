@@ -1,2 +1,2 @@
 obj-m += vpn_fingerprinting.o
-vpn_fingerprinting-objs := new_packet_arrival.o analyze_packet.o
+vpn_fingerprinting-objs := new_packet_arrival.o parse_packet.o analyze_packet.o

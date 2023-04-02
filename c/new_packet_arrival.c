@@ -9,6 +9,7 @@
                               */
 #include <linux/netfilter_ipv4.h> /* NF_IP_PRI_LAST */
 
+#include "parse_packet.h"
 #include "analyze_packet.h"
 
 static const unsigned short protocol_ip = htons(ETH_P_IP);
@@ -26,7 +27,11 @@ unsigned int hook_funcion(void *priv, struct sk_buff *skb, const struct nf_hook_
       &ip_header->daddr,
       timestamp
     ); /* XXX */
-    is_tracked_connection(ntohl(ip_header->saddr), ntohl(ip_header->daddr), timestamp);
+    ip_type source_ip = ntohl(ip_header->saddr);
+    ip_type destination_ip = ntohl(ip_header->daddr);
+    if (is_tracked_connection(&source_ip, &destination_ip)) {
+      analyze(source_ip, destination_ip, timestamp);
+    }
   }
   return NF_ACCEPT;
 }
