@@ -1,61 +1,56 @@
+#include <linux/if_ether.h> /* ETH_P_IP */
 #include <linux/init.h>
+#include <linux/ip.h> /* iphdr, ip_hdr() */
 #include <linux/kernel.h>
+#include <linux/timekeeping.h> /* ktime_get_boottime_seconds() */
 #include <linux/module.h> /* MODULE_LICENSE(), module_init(), module_exit() */
+#include <linux/netfilter.h> /* NF_ACCEPT, NF_INET_FORWARD, NFPROTO_IPV4, nf_hook_ops,
+                              * nf_hook_state, nf_register_net_hook(), nf_unregister_net_hook()
+                              */
+#include <linux/netfilter_ipv4.h> /* NF_IP_PRI_LAST */
 
 #include "analyze_packet.h"
 
+static const unsigned short protocol_ip = htons(ETH_P_IP);
+
 static struct nf_hook_ops nfho;
+
+unsigned int hook_funcion(void *priv, struct sk_buff *skb, const struct nf_hook_state *state) {
+  if (protocol_ip == skb->protocol) {
+    struct iphdr const *const ip_header = ip_hdr(skb);
+    time64_t timestamp = ktime_get_boottime_seconds();
+    printk
+    (
+      KERN_INFO "[Debug] Packet from %pI4 to %pI4 timestamp %llu\n",
+      &ip_header->saddr,
+      &ip_header->daddr,
+      timestamp
+    ); /* XXX */
+    analyze(ntohl(ip_header->saddr), ntohl(ip_header->daddr), timestamp);
+  }
+  return NF_ACCEPT;
+}
 
 /**************************************************************************************************/
 /**** Entry and exit points                                                                    ****/
 /**************************************************************************************************/
 
-static int __init hello_init(void) {
-  printk(KERN_INFO "Hello, world\n");
-  /* Initial */
-  printk(KERN_INFO "Initial list\n");
-  debug_print_all_hosts();
-  /* Insert 4 numbers */
-  printk(KERN_INFO "Insert `8`, `1000`, `30` and then `2`\n");
-  analyze(8, 0, 0);
-  analyze(1000, 0, 0);
-  analyze(30, 0, 0);
-  analyze(2, 0, 0);
-  debug_print_all_hosts();
-  /* Remove tail */
-  printk(KERN_INFO "Remove the tail\n");
-  remove_node(hosts_tail);
-  debug_print_all_hosts();
-  /* Remove head */
-  printk(KERN_INFO "Remove the head\n");
-  remove_node(hosts_head);
-  debug_print_all_hosts();
-  /* Insert and then remove */
-  printk(KERN_INFO "Insert `15`\n");
-  analyze(15, 0, 0);
-  debug_print_all_hosts();
-  printk(KERN_INFO "Remove `15`\n");
-  remove_node(search_node(15));
-  debug_print_all_hosts();
-  printk(KERN_INFO "Check the reporter for IP `8`\n");
-  printk(KERN_INFO "Second packet from `8`\n");
-  analyze(8, 0, 0);
-  printk(KERN_INFO "Third packet from `8`\n");
-  analyze(8, 0, 0);
-  printk(KERN_INFO "Fourth packet from `8`\n");
-  analyze(8, 0, 21U * 60U);
-  printk(KERN_INFO "Fifth packet from `8`\n");
-  analyze(8, 0, 0);
-  /* Done */
-  printk(KERN_INFO "Done\n");
+static int __init vpn_fingerprinting_init(void) {
+  printk(KERN_INFO "VPN fingerprinting module loaded.\n");
+  nfho.hook = hook_funcion;
+  nfho.hooknum = NF_INET_PRE_ROUTING;
+  nfho.pf = NFPROTO_IPV4;
+  nfho.priority = NF_IP_PRI_LAST;
+  nf_register_net_hook(&init_net, &nfho);
   return 0;
 }
 
-static void __exit hello_exit(void) {
-  printk(KERN_INFO "Goodbye, world\n");
+static void __exit vpn_fingerprinting_exit(void) {
+  nf_unregister_net_hook(&init_net, &nfho);
+  printk(KERN_INFO "VPN fingerprinting module was removed.\n");
 }
 
-module_init(hello_init);
-module_exit(hello_exit);
+module_init(vpn_fingerprinting_init);
+module_exit(vpn_fingerprinting_exit);
 
 MODULE_LICENSE("GPL");
