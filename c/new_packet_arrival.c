@@ -26,7 +26,7 @@ unsigned int hook_funcion(void *priv, struct sk_buff *skb, const struct nf_hook_
       &ip_header->daddr,
       timestamp
     ); /* XXX */
-    analyze(ntohl(ip_header->saddr), ntohl(ip_header->daddr), timestamp);
+    is_tracked_connection(ntohl(ip_header->saddr), ntohl(ip_header->daddr), timestamp);
   }
   return NF_ACCEPT;
 }

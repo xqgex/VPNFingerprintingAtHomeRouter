@@ -40,6 +40,10 @@ typedef struct hosts_node {
   struct hosts_node      *prev;
 } hosts_node_type;
 
+typedef struct {
+    uint32_t address;
+    uint32_t mask;
+} PrivateAddress;
 /**************************************************************************************************/
 /**** Static variables                                                                         ****/
 /**************************************************************************************************/
@@ -49,6 +53,14 @@ static timestamp_type  const  time_window_sec          = METRIC_TIME_WINDOW_SEC;
 static timestamp_type  const  window_overlap_threshold = METRIC_WINDOW_OVERLAP_THRESHOLD;
 static hosts_node_type       *hosts_head               = NULL;
 static hosts_node_type       *hosts_tail               = NULL;
+const PrivateAddress privateAddresses[] = {
+    {0x0A000000, 0xFF000000},          // 10.0.0.0/8
+    {0xAC100000, 0xFFF00000},          // 172.16.0.0/12
+    {0xC0A80000, 0xFFFF0000},          // 192.168.0.0/16
+    {0xA9FE0000, 0xFFFF0000},          // 169.254.0.0/16
+    {0xE0000000, 0xF0000000},          // 224.0.0.0/4
+    {0xFFFFFFFF, 0xFFFFFFFF}           // broadcast address
+};
 
 /**************************************************************************************************/
 /**** Private functions prototype                                                              ****/
@@ -60,11 +72,23 @@ function_ret_type  is_suspected_vpn(ip_type ip_source);
 void               remove_node(hosts_node_type *node_to_remove);
 void               report(ip_type ip_source, ip_type ip_destination, timestamp_type timestamp);
 hosts_node_type   *search_node(ip_type ip_source);
+int is_private_ip(uint32_t address);
 
 /**************************************************************************************************/
 /**** Private functions                                                                        ****/
 /**************************************************************************************************/
 
+int is_private_ip(uint32_t address){
+    int i =0 ;
+    while(i < sizeof(privateAddresses)/sizeof(PrivateAddress)){
+        if ((address & privateAddresses[i].mask) == privateAddresses[i].address) {
+            return 1;
+        }
+        i++;
+    }
+
+    return 0;
+}  
 hosts_node_type *create_empty_node(ip_type value) {
   hosts_node_type *new_node = (hosts_node_type *)kmalloc(sizeof(hosts_node_type), GFP_KERNEL);
   new_node->ip                        = value;
@@ -216,11 +240,31 @@ hosts_node_type *search_node(ip_type ip_source) {
 /**************************************************************************************************/
 /**** Public functions                                                                         ****/
 /**************************************************************************************************/
+int is_tracked_connection(ip_type ip_source, ip_type ip_destination, timestamp_type timestamp){
+  if(is_private_ip(ip_source)&&is_private_ip(ip_destination)){
+    /*Both ip are private*/
+    return 0;
+  }
+  else if(is_private_ip(ip_source) && (is_private_ip(ip_destination)==0)){
+    /*src is private
+      dst is public
+      no flip is needed*/
+    analyze(ip_source,ip_destination, timestamp)
+    return 1;
+  }
+  else if(is_private_ip(ip_destination) && (is_private_ip(ip_source)==0)){
+    /*src is public 
+      dst is private
+      flip is needed*/
+    analyze(ip_destination, ip_source, timestamp)
+      return 1;
 
+  }
+}
 void analyze(ip_type ip_source, ip_type ip_destination, timestamp_type timestamp) {
   function_ret_type  ret  = RET_SUCCESS;
   hosts_node_type   *node = search_node(ip_source);
-  if (node == NULL) { /* Initial record */
+  if (node == NULL)) { /* Initial record */
     printk(KERN_INFO "[Debug] analyze() - Initial record\n"); /* XXX */
     node = create_empty_node(ip_source);
     ret = insert_node(node);
