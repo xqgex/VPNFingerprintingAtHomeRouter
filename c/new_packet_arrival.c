@@ -21,15 +21,8 @@ unsigned int hook_funcion(void *priv, struct sk_buff *skb, const struct nf_hook_
     struct iphdr const *const ip_header = ip_hdr(skb);
     ip_type source_ip = ntohl(ip_header->saddr);
     ip_type destination_ip = ntohl(ip_header->daddr);
-    time64_t timestamp = ktime_get_boottime_seconds();
-    printk
-    (
-      KERN_INFO "[Debug] Packet from %pI4 to %pI4 timestamp %llu\n",
-      &ip_header->saddr,
-      &ip_header->daddr,
-      timestamp
-    ); /* XXX */
     if (RET_ANALYZE == check_connection(&source_ip, &destination_ip)) {
+      time64_t timestamp = ktime_get_boottime_seconds();
       analyze(source_ip, destination_ip, timestamp);
     }
   }
