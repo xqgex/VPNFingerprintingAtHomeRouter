@@ -1,3 +1,4 @@
+from argparse import ArgumentParser, RawTextHelpFormatter
 from enum import Enum
 from itertools import groupby
 from pathlib import Path
@@ -5,7 +6,6 @@ from re import fullmatch
 from statistics import mean
 from typing import Iterable, NamedTuple, Optional, Tuple
 
-_DMESG_LOG = Path('./dmesg.log').resolve()
 _REGEX_DMESG_DEBUG_LINE = r'[ :\w]+ kern.debug kernel: \[\d+.\d{6}\] \[Debug\] - analyze\(\) - ([ \w]+) - ([.\d]+) - ([.\d]+) - (\d+) - (\d+)'
 _REGEX_DMESG_NOTICE_LINE = r'[ :\w]+ kern.debug kernel: \[\d+.\d{6}\] \[Notice\] - reporter\(\) - ([ \w]+) - ([.\d]+) - ([.\d]+) - (\d+)'
 
@@ -87,8 +87,8 @@ class IPSessions(NamedTuple):
         return cls(source_ip=source_ip, sessions=tuple(sessions))
 
 
-def main():
-    dmesg_lines = map(DmesgLine.from_string, _DMESG_LOG.read_text().splitlines())
+def main(log_file_path: Path):
+    dmesg_lines = map(DmesgLine.from_string, log_file_path.read_text().splitlines())
     ip_sessions = tuple(map(IPSessions.from_groupby, groupby(dmesg_lines, lambda l: l.source_ip)))
     for ip_session in ip_sessions:
         print('=' * 45)
@@ -100,4 +100,12 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    argparser = ArgumentParser(formatter_class=RawTextHelpFormatter)
+    argparser.add_argument(
+        '--path',
+        dest='log_file_path',
+        help='The path to the dmesg log file',
+        metavar='<log_file_path>',
+        required=True,
+        )
+    main(log_file_path=Path(argparser.parse_args().log_file_path).resolve())
