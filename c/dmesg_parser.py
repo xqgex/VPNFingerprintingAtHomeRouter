@@ -64,15 +64,21 @@ class IPSessions(NamedTuple):
     sessions: Tuple[Session, ...]
 
     @property
-    def average_session(self) -> int:
-        return mean(s.duration for s in self.sessions)
+    def average_session(self) -> Optional[float]:
+        if len(self.sessions) == 0:
+            return None
+        return round(mean(s.duration for s in self.sessions), 4)
 
     @property
-    def longest_session(self) -> int:
+    def longest_session(self) -> Optional[int]:
+        if len(self.sessions) == 0:
+            return None
         return max(s.duration for s in self.sessions)
 
     @property
-    def packets_in_longest_session(self) -> int:
+    def packets_in_longest_session(self) -> Optional[int]:
+        if len(self.sessions) == 0:
+            return None
         longest_session = self.longest_session
         return max(s.packets_count for s in self.sessions if s.duration == longest_session)
 
@@ -82,14 +88,18 @@ class IPSessions(NamedTuple):
         dmesg_lines = tuple(dmesg_lines)
         sessions = []
         for line_index, dmesg_line in enumerate(dmesg_lines):
+            if dmesg_line.source_ip != source_ip:
+                raise ValueError(
+                    f'Invalid input, data source IP address does not match\nIP: {source_ip}\n{dmesg_line}')
             if line_index > 0 and dmesg_line.message_tupe == DmesgLineType.NEW_CONNECTION:
                 sessions.append(Session.from_two_lines(dmesg_lines[line_index - 1], dmesg_line))
         return cls(source_ip=source_ip, sessions=tuple(sessions))
 
 
-def main(log_file_path: Path):
-    dmesg_lines = map(DmesgLine.from_string, log_file_path.read_text().splitlines())
-    ip_sessions = tuple(map(IPSessions.from_groupby, groupby(dmesg_lines, lambda l: l.source_ip)))
+def main(log_file_path: Path) -> None:
+    dmesg_lines = filter(None, map(DmesgLine.from_string, log_file_path.read_text().splitlines()))
+    dmesg_lines_sorted = sorted(dmesg_lines, key=lambda l: l.source_ip)
+    ip_sessions = tuple(map(IPSessions.from_groupby, groupby(dmesg_lines_sorted, lambda l: l.source_ip)))
     for ip_session in ip_sessions:
         print('=' * 45)
         print(f'Source IP address: {ip_session.source_ip}')
