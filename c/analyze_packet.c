@@ -219,23 +219,31 @@ hosts_node_type *search_node(ip_type ip_source) {
 
 void analyze(ip_type ip_source, ip_type ip_destination, timestamp_type timestamp) {
   function_ret_type  ret  = RET_SUCCESS;
+  u32 const debug_printable_ip_source = htonl(ip_source); /* XXX */
+  u32 const debug_printable_ip_destination = htonl(ip_destination); /* XXX */
   hosts_node_type   *node = search_node(ip_source);
   if (node == NULL) { /* Initial record */
-    u32 const printable_ip_source = htonl(ip_source); /* XXX */
-    u32 const printable_ip_destination = htonl(ip_destination); /* XXX */
     node = create_empty_node(ip_source);
     ret = insert_node(node);
     printk
     (
       KERN_DEBUG "[Debug] - analyze() - Initial record - %pI4 - %pI4 - %llu - %u\n",
-      &printable_ip_source,
-      &printable_ip_destination,
+      &debug_printable_ip_source,
+      &debug_printable_ip_destination,
       timestamp,
       node->connection.count_this
     ); /* XXX */
   }
   if (RET_SUCCESS == ret) {
     if (ip_destination != node->connection.ip_destination) { /* New connection */
+      printk
+      (
+        KERN_DEBUG "[Debug] - analyze() - New connection - %pI4 - %pI4 - %llu - %u\n",
+        &debug_printable_ip_source,
+        &debug_printable_ip_destination,
+        timestamp,
+        node->connection.count_this
+      ); /* XXX */
       node->connection.ip_destination = ip_destination;
       node->connection.timestamp      = timestamp;
       node->connection.count_this     = 1U;
@@ -243,13 +251,11 @@ void analyze(ip_type ip_source, ip_type ip_destination, timestamp_type timestamp
       node->connection.count_this += 1;
     }
     if (time_window_sec < timestamp - node->connection.timestamp) { /* Start a new window */
-      u32 const printable_ip_source = htonl(ip_source); /* XXX */
-      u32 const printable_ip_destination = htonl(ip_destination); /* XXX */
       printk
       (
         KERN_DEBUG "[Debug] - analyze() - Start a new window - %pI4 - %pI4 - %llu - %u\n",
-        &printable_ip_source,
-        &printable_ip_destination,
+        &debug_printable_ip_source,
+        &debug_printable_ip_destination,
         timestamp,
         node->connection.count_this
       ); /* XXX */
