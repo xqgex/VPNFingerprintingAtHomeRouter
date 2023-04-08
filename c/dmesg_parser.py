@@ -70,6 +70,15 @@ class IPSessions(NamedTuple):
         return round(mean(s.duration for s in self.sessions), 4)
 
     @property
+    def destination_address_of_longest_session(self) -> Optional[str]:
+        longest_session = self.longest_session
+        packets_in_longest_session = self.packets_in_longest_session
+        for session in self.sessions:
+            if session.duration == longest_session and session.packets_count == packets_in_longest_session:
+                return session.destination_ip
+        return None
+
+    @property
     def longest_session(self) -> Optional[int]:
         if len(self.sessions) == 0:
             return None
@@ -81,6 +90,10 @@ class IPSessions(NamedTuple):
             return None
         longest_session = self.longest_session
         return max(s.packets_count for s in self.sessions if s.duration == longest_session)
+
+    @property
+    def unique_destination_addresses(self) -> int:
+        return len(set(s.destination_ip for s in self.sessions))
 
     @classmethod
     def from_groupby(cls, groupby_data: Tuple[str, Iterable[DmesgLine]]) -> 'IPSessions':
@@ -101,12 +114,14 @@ def main(log_file_path: Path) -> None:
     dmesg_lines_sorted = sorted(dmesg_lines, key=lambda l: l.source_ip)
     ip_sessions = tuple(map(IPSessions.from_groupby, groupby(dmesg_lines_sorted, lambda l: l.source_ip)))
     for ip_session in ip_sessions:
-        print('=' * 45)
+        print('=' * 50)
         print(f'Source IP address: {ip_session.source_ip}')
         print(f'How many sessions switches: {len(ip_session.sessions)}')
+        print(f'Unique destination IP addresses: {ip_session.unique_destination_addresses}')
         print(f'Average session duration: {ip_session.average_session}')
         print(f'Longest session duration: {ip_session.longest_session}')
         print(f'Number of packets in the longest session: {ip_session.packets_in_longest_session}')
+        print(f'Destination IP address of the longest session: {ip_session.destination_address_of_longest_session}')
 
 
 if __name__ == '__main__':
