@@ -14,7 +14,7 @@ include $(TOPDIR)/rules.mk
 
 # Name and release number of this package
 PKG_NAME:=vpn-fingerprinting
-PKG_VERSION:=1.05
+PKG_VERSION:=1.06
 PKG_RELEASE:=1
 PKG_LICENSE:=GPL
 
