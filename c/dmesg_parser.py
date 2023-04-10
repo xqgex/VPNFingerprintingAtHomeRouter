@@ -7,7 +7,7 @@ from statistics import mean
 from typing import Iterable, NamedTuple, Optional, Tuple
 
 _REGEX_DMESG_DEBUG_LINE = r'[ :\w]+ kern.debug kernel: \[\d+.\d{6}\] \[Debug\] - analyze\(\) - ([ \w]+) - ([.\d]+) - ([.\d]+) - (\d+) - (\d+)'
-_REGEX_DMESG_NOTICE_LINE = r'[ :\w]+ kern.debug kernel: \[\d+.\d{6}\] \[Notice\] - reporter\(\) - ([ \w]+) - ([.\d]+) - ([.\d]+) - (\d+)'
+_REGEX_DMESG_NOTICE_LINE = r'[ :\w]+ kern.notice kernel: \[\d+.\d{6}\] \[Notice\] - reporter\(\) - ([ \w]+) - ([.\d]+) - ([.\d]+) - (\d+)'
 
 
 class DmesgLineType(Enum):
@@ -16,13 +16,21 @@ class DmesgLineType(Enum):
     NEW_CONNECTION = 'New connection'
     NEW_WINDOW = 'Start a new window'
 
+    @classmethod
+    def is_type_indicating_vpn(cls, message_type: 'DmesgLineType') -> bool:
+        return message_type == cls.FOUND_VPN
+
+    @classmethod
+    def is_type_to_track(cls, message_type: 'DmesgLineType') -> bool:
+        return message_type in [cls.NEW_CONNECTION, cls.NEW_WINDOW]
+
 
 class DmesgLine(NamedTuple):
     source_ip: str
     destination_ip: str
     timestamp_sec: int
     packets_count: Optional[int]
-    message_tupe: DmesgLineType
+    message_type: DmesgLineType
 
     @classmethod
     def from_string(cls, log_line: str) -> Optional['DmesgLine']:
@@ -38,7 +46,7 @@ class DmesgLine(NamedTuple):
                    destination_ip=dst,
                    timestamp_sec=int(timestamp),
                    packets_count=int(count) if count else count,
-                   message_tupe=DmesgLineType(message))
+                   message_type=DmesgLineType(message))
 
 
 class Session(NamedTuple):
@@ -62,6 +70,7 @@ class Session(NamedTuple):
 class IPSessions(NamedTuple):
     source_ip: str
     sessions: Tuple[Session, ...]
+    vpn_found: bool
 
     @property
     def average_session(self) -> Optional[float]:
@@ -99,14 +108,17 @@ class IPSessions(NamedTuple):
     def from_groupby(cls, groupby_data: Tuple[str, Iterable[DmesgLine]]) -> 'IPSessions':
         source_ip, dmesg_lines = groupby_data
         dmesg_lines = tuple(dmesg_lines)
+        vpn_found = False
         sessions = []
         for line_index, dmesg_line in enumerate(dmesg_lines):
             if dmesg_line.source_ip != source_ip:
                 raise ValueError(
                     f'Invalid input, data source IP address does not match\nIP: {source_ip}\n{dmesg_line}')
-            if line_index > 0 and dmesg_line.message_tupe == DmesgLineType.NEW_CONNECTION:
+            if line_index > 0 and DmesgLineType.is_type_to_track(dmesg_line.message_type):
                 sessions.append(Session.from_two_lines(dmesg_lines[line_index - 1], dmesg_line))
-        return cls(source_ip=source_ip, sessions=tuple(sessions))
+            elif line_index > 0 and DmesgLineType.is_type_indicating_vpn(dmesg_line.message_type):
+                vpn_found = True
+        return cls(source_ip=source_ip, sessions=tuple(sessions), vpn_found=vpn_found)
 
 
 def main(log_file_path: Path) -> None:
@@ -122,6 +134,8 @@ def main(log_file_path: Path) -> None:
         print(f'Longest session duration: {ip_session.longest_session}')
         print(f'Number of packets in the longest session: {ip_session.packets_in_longest_session}')
         print(f'Destination IP address of the longest session: {ip_session.destination_address_of_longest_session}')
+        if ip_session.vpn_found:
+            print('🥳🥳🥳 !!! Found a VPN connection !!! 🥳🥳🥳')
 
 
 if __name__ == '__main__':
