@@ -16,14 +16,6 @@ class DmesgLineType(Enum):
     NEW_CONNECTION = 'New connection'
     NEW_WINDOW = 'Start a new window'
 
-    @classmethod
-    def is_type_indicating_vpn(cls, message_type: 'DmesgLineType') -> bool:
-        return message_type == cls.FOUND_VPN
-
-    @classmethod
-    def is_type_to_track(cls, message_type: 'DmesgLineType') -> bool:
-        return message_type in [cls.NEW_CONNECTION, cls.NEW_WINDOW]
-
 
 class DmesgLine(NamedTuple):
     source_ip: str
@@ -58,6 +50,16 @@ class Session(NamedTuple):
     @property
     def duration(self) -> int:
         return self.timestamp_end - self.timestamp_start
+
+    @classmethod
+    def extend_session(cls, first_session: 'Session', dmesg_line: DmesgLine) -> 'Session':
+        if first_session.destination_ip != dmesg_line.destination_ip:
+            raise ValueError(
+                f'Invalid input, cannot extend sessions with different IP addresses\n{first_session}\n{dmesg_line}')
+        return cls(destination_ip=first_session.destination_ip,
+                   timestamp_start=first_session.timestamp_start,
+                   timestamp_end=dmesg_line.timestamp_sec,
+                   packets_count=first_session.packets_count + dmesg_line.packets_count)
 
     @classmethod
     def from_two_lines(cls, first_line: DmesgLine, second_line: DmesgLine) -> 'Session':
@@ -114,10 +116,13 @@ class IPSessions(NamedTuple):
             if dmesg_line.source_ip != source_ip:
                 raise ValueError(
                     f'Invalid input, data source IP address does not match\nIP: {source_ip}\n{dmesg_line}')
-            if line_index > 0 and DmesgLineType.is_type_to_track(dmesg_line.message_type):
-                sessions.append(Session.from_two_lines(dmesg_lines[line_index - 1], dmesg_line))
-            elif line_index > 0 and DmesgLineType.is_type_indicating_vpn(dmesg_line.message_type):
-                vpn_found = True
+            if line_index > 0:
+                if dmesg_line.message_type == DmesgLineType.NEW_CONNECTION:
+                    sessions.append(Session.from_two_lines(dmesg_lines[line_index - 1], dmesg_line))
+                elif dmesg_line.message_type == DmesgLineType.NEW_WINDOW:
+                    sessions[-1] = Session.extend_session(sessions[-1], dmesg_line)
+                elif dmesg_line.message_type == DmesgLineType.FOUND_VPN:
+                    vpn_found = True
         return cls(source_ip=source_ip, sessions=tuple(sessions), vpn_found=vpn_found)
 
 
