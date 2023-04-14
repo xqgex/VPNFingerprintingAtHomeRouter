@@ -7,7 +7,7 @@ from statistics import mean
 from typing import Iterable, NamedTuple, Optional, Tuple
 
 _REGEX_DMESG_DEBUG_LINE = r'[ :\w]+ kern.debug kernel: \[\s*\d+.\d{6}\] \[Debug\] - analyze\(\) - ([ \w]+) - ([.\d]+) - ([.\d]+) - (\d+) - (\d+)'
-_REGEX_DMESG_NOTICE_LINE = r'[ :\w]+ kern.notice kernel: \[\\s*d+.\d{6}\] \[Notice\] - reporter\(\) - ([ \w]+) - ([.\d]+) - ([.\d]+) - (\d+)'
+_REGEX_DMESG_NOTICE_LINE = r'[ :\w]+ kern.notice kernel: \[\s*\d+.\d{6}\] \[Notice\] - reporter\(\) - ([ \w]+) - ([.\d]+) - ([.\d]+) - (\d+)'
 
 
 class DmesgLineType(Enum):
